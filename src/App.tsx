@@ -44,6 +44,16 @@ function App() {
     const file = event.target.files?.[0]
     if (!file) return
 
+    // Validate file type
+    const fileName = file.name.toLowerCase()
+    const isValidFile = fileName.endsWith('.fit') || fileName.endsWith('.fir') ||
+                       file.type === 'application/octet-stream' || file.type === ''
+
+    if (!isValidFile) {
+      setError('Please select a valid FIT file (.fit or .fir).')
+      return
+    }
+
     setFileName(file.name)
     setError('')
     setIsLoading(true)
@@ -55,7 +65,7 @@ function App() {
       // Use cached parser
       fitParser.parse(arrayBuffer, (parseError: any, data: any) => {
         if (parseError) {
-          setError('Error parsing FIT file.')
+          setError('Error parsing FIT file. Please ensure it\'s a valid Garmin FIT file.')
           console.error('Parse error:', parseError)
           setIsLoading(false)
           return
@@ -79,13 +89,25 @@ function App() {
       records: records.length,
       distance: 0,
       time: 0,
+      timeFormatted: '',
       avgHeartRate: 0
     }
 
     if (fitData.sessions && fitData.sessions.length > 0) {
       const session = fitData.sessions[0]
       if (session.total_distance) stats.distance = session.total_distance
-      if (session.total_elapsed_time) stats.time = session.total_elapsed_time / 60
+      if (session.total_elapsed_time) {
+        stats.time = session.total_elapsed_time / 60
+        // Format time display
+        const totalMinutes = Math.round(session.total_elapsed_time / 60)
+        if (totalMinutes >= 60) {
+          const hours = Math.floor(totalMinutes / 60)
+          const minutes = totalMinutes % 60
+          stats.timeFormatted = minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`
+        } else {
+          stats.timeFormatted = `${totalMinutes}min`
+        }
+      }
       if (session.avg_heart_rate) stats.avgHeartRate = session.avg_heart_rate
     }
 
@@ -120,11 +142,11 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-10">
         {/* Header */}
         <header className="flex items-center flex-col gap-3">
-          <h1 className="text-3xl font-semibold tracking-tight">Garmin FIT Data Viewer</h1>
-          <p className="text-sm text-slate-400 max-w-2xl text-center">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">Garmin FIT Data Viewer</h1>
+          <p className="text-sm text-slate-400 max-w-2xl text-center px-2">
             Upload a FIT file to view summary stats and simple line charts. The layout is kept
             intentionally minimal for focus on the data.
           </p>
@@ -137,7 +159,7 @@ function App() {
               <button
                 onClick={handleFileSelect}
                 disabled={isLoading}
-                className="inline-flex cursor-pointer items-center gap-2 px-4 py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-100 text-sm font-medium hover:bg-slate-750 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex cursor-pointer items-center gap-3 px-6 py-3 sm:px-4 sm:py-2 rounded-lg border border-slate-700 bg-slate-800 text-slate-100 text-base sm:text-sm font-medium hover:bg-slate-750 disabled:opacity-60 disabled:cursor-not-allowed transition-colors min-h-[44px]"
               >
                 {isLoading ? (
                   <>
@@ -161,7 +183,6 @@ function App() {
             <input
               ref={fileInputRef}
               type="file"
-              accept=".fit"
               onChange={handleFileChange}
               className="hidden"
             />
@@ -179,7 +200,7 @@ function App() {
           <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard label="Data points" value={summary.records.toLocaleString()} />
             <StatCard label="Distance (km)" value={summary.distance.toFixed(1)} />
-            <StatCard label="Duration (min)" value={summary.time.toFixed(1)} />
+            <StatCard label="Duration" value={summary.timeFormatted} />
             <StatCard label="Avg BPM" value={summary.avgHeartRate} />
           </section>
         )}

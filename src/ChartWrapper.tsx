@@ -53,7 +53,7 @@ function ChartWrapper({ timestamps, heartRates, speeds, elevations }: ChartWrapp
     <div className="space-y-6">
       {heartRates.length > 0 && (
         <ChartCard title="Heart rate" tag="BPM">
-          <ChartContainer config={heartRateConfig} className="h-[320px] w-full">
+          <ChartContainer config={heartRateConfig} className="h-[280px] sm:h-[320px] w-full">
             <LineChart data={chartData}>
               <CartesianGrid />
               <XAxis dataKey="time" />
@@ -73,7 +73,7 @@ function ChartWrapper({ timestamps, heartRates, speeds, elevations }: ChartWrapp
 
       {speeds.length > 0 && (
         <ChartCard title="Speed" tag="km/h">
-          <ChartContainer config={speedConfig} className="h-[320px] w-full">
+          <ChartContainer config={speedConfig} className="h-[280px] sm:h-[320px] w-full">
             <LineChart data={chartData}>
               <CartesianGrid />
               <XAxis dataKey="time" />
@@ -93,7 +93,7 @@ function ChartWrapper({ timestamps, heartRates, speeds, elevations }: ChartWrapp
 
       {elevations.length > 0 && (
         <ChartCard title="Elevation" tag="meters">
-          <ChartContainer config={elevationConfig} className="h-[320px] w-full">
+          <ChartContainer config={elevationConfig} className="h-[280px] sm:h-[320px] w-full">
             <LineChart data={chartData}>
               <CartesianGrid />
               <XAxis dataKey="time" />
@@ -118,7 +118,7 @@ export default ChartWrapper
 
 function ChartCard({ title, tag, children }: { title: string; tag: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-5 shadow-sm space-y-4">
+    <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-4 sm:p-5 shadow-sm space-y-4">
       <div className="flex items-center gap-3">
         <h3 className="text-base font-semibold text-slate-100">{title}</h3>
         <span className="text-xs text-slate-400 px-2 py-0.5 rounded-full border border-slate-800">{tag}</span>
