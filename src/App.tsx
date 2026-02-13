@@ -183,6 +183,7 @@ function App() {
             <input
               ref={fileInputRef}
               type="file"
+              accept="application/*"
               onChange={handleFileChange}
               className="hidden"
             />
