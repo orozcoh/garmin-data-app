@@ -10,10 +10,10 @@ interface ChartWrapperProps {
   elevations: number[]
   distances: number[]
   temperatures: number[]
-  sampleRate: number
 }
 
-const ChartWrapper = React.memo(function ChartWrapper({ timestamps, heartRates, speeds, elevations, distances, temperatures, sampleRate }: ChartWrapperProps) {
+const ChartWrapper = React.memo(function ChartWrapper({ timestamps, heartRates, speeds, elevations, distances, temperatures }: ChartWrapperProps) {
+  const sampleRate = 300
   // Prepare data for Recharts (combine arrays into objects)
   const chartData = useMemo(() => {
     if (timestamps.length === 0) return []
@@ -69,7 +69,7 @@ const ChartWrapper = React.memo(function ChartWrapper({ timestamps, heartRates, 
     }
 
     return data
-  }, [timestamps, heartRates, speeds, elevations, distances, temperatures, sampleRate])
+  }, [timestamps, heartRates, speeds, elevations, distances, temperatures])
 
   const heartRateConfig = {
     heartRate: {
@@ -85,10 +85,14 @@ const ChartWrapper = React.memo(function ChartWrapper({ timestamps, heartRates, 
     },
   } satisfies ChartConfig
 
-  const elevationConfig = {
+  const elevationTemperatureConfig = {
     elevation: {
       label: "Elevation",
       color: "hsl(var(--chart-3))",
+    },
+    temperature: {
+      label: "Temperature",
+      color: "hsl(var(--chart-5))",
     },
   } satisfies ChartConfig
 
@@ -134,21 +138,35 @@ const ChartWrapper = React.memo(function ChartWrapper({ timestamps, heartRates, 
         </ChartCard>
       )}
 
-      {elevations.length > 0 && (
-        <ChartCard title="Elevation" tag="meters">
-          <ChartContainer config={elevationConfig} className="h-[280px] sm:h-[320px] w-full">
+      {(elevations.length > 0 || temperatures.length > 0) && (
+        <ChartCard title="Elevation & Temperature" tag="m / °C">
+          <ChartContainer config={elevationTemperatureConfig} className="h-[280px] sm:h-[320px] w-full">
             <LineChart data={chartData}>
               <CartesianGrid />
               <XAxis dataKey="time" />
-              <YAxis />
+              <YAxis yAxisId="left" stroke="#0ea5e9" />
+              <YAxis yAxisId="right" orientation="right" stroke="#f59e0b" />
               <ChartTooltip content={<ChartTooltipContent className="bg-slate-800 border-slate-700 text-slate-100 [&>div>span:last-child]:text-white" />} />
-              <Line
-                type="monotone"
-                dataKey="elevation"
-                stroke="#0ea5e9"
-                strokeWidth={2}
-                dot={false}
-              />
+              {elevations.length > 0 && (
+                <Line
+                  type="monotone"
+                  yAxisId="left"
+                  dataKey="elevation"
+                  stroke="#0ea5e9"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              )}
+              {temperatures.length > 0 && (
+                <Line
+                  type="monotone"
+                  yAxisId="right"
+                  dataKey="temperature"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              )}
             </LineChart>
           </ChartContainer>
         </ChartCard>
@@ -176,27 +194,6 @@ const ChartWrapper = React.memo(function ChartWrapper({ timestamps, heartRates, 
         </ChartCard>
       )}
 
-      {temperatures.length > 0 && (
-        <ChartCard title="Temperature" tag="°C">
-          <ChartContainer config={{
-            temperature: { label: "Temperature", color: "hsl(var(--chart-5))" }
-          }} className="h-[280px] sm:h-[320px] w-full">
-            <LineChart data={chartData}>
-              <CartesianGrid />
-              <XAxis dataKey="time" />
-              <YAxis />
-              <ChartTooltip content={<ChartTooltipContent className="bg-slate-800 border-slate-700 text-slate-100 [&>div>span:last-child]:text-white" />} />
-              <Line
-                type="monotone"
-                dataKey="temperature"
-                stroke="#f59e0b"
-                strokeWidth={2}
-                dot={false}
-              />
-            </LineChart>
-          </ChartContainer>
-        </ChartCard>
-      )}
     </div>
   )
 })
