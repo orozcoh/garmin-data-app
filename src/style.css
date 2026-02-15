@@ -182,3 +182,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Leaflet overrides for Tailwind conflicts */
+.leaflet-container {
+  font: 12px/1.5 "Helvetica Neue", Arial, Helvetica, sans-serif;
+}
+
+.leaflet-container * {
+  box-sizing: border-box;
+}
+
+.leaflet-container img {
+  border: 0 !important;
+}
+
+.leaflet-tile-pane {
+  z-index: 1;
+}
+
+.leaflet-container a {
+  color: #1978cf;
+}

@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
 import { parseFitFile, type ParseResult, type FitRecord } from './lib/parseFit'
 import ChartWrapper from './ChartWrapper'
+import MapWrapper from './MapWrapper'
 import { askAI } from './lib/askAI'
 
 
@@ -62,6 +63,8 @@ function App() {
       time: 0,
       timeFormatted: '',
       avgHeartRate: session.avg_heart_rate || 0,
+      avgTemp: session.avg_temperature ? session.avg_temperature.toFixed(1) : 'N/A',
+      maxTemp: session.max_temperature ? session.max_temperature.toFixed(1) : 'N/A',
       np: np.toFixed(0),
       tss: tss.toFixed(0),
       best20min: best20min.toFixed(0),
@@ -92,6 +95,9 @@ function App() {
     const heartRates: number[] = []
     const speeds: number[] = []
     const elevations: number[] = []
+    const distances: number[] = []
+    const temperatures: number[] = []
+    let positions: Array<{lat: number; lng: number}> = []
 
     // Combine iterations (7.6 Combine Multiple Array Iterations)
     for (const record of records) {
@@ -99,17 +105,52 @@ function App() {
       if (record.heart_rate) heartRates.push(record.heart_rate)
       if (record.speed) speeds.push(record.speed)
       if (record.altitude) elevations.push(record.altitude)
+      if (record.distance) distances.push(record.distance / 1000)
+      if (record.temperature !== undefined) temperatures.push(record.temperature)
+      if (record.position_lat !== undefined && record.position_long !== undefined) {
+        positions.push({ lat: record.position_lat, lng: record.position_long })
+      }
+    }
+    console.log("Extracted positions:", positions) // Debug log to inspect position data
+
+    // Sample positions for map performance (100-200 points max)
+    if (positions.length > 200) {
+      const target = 150
+      const step = Math.floor(positions.length / target)
+      const sampled = [positions[0]]
+      for (let i = step; i < positions.length - step; i += step) {
+        sampled.push(positions[i])
+      }
+      sampled.push(positions[positions.length - 1])
+      positions = sampled
+    }
+
+    console.log("Sampled positions for map:", positions) // Debug log to inspect sampled position data
+
+    // Compute cumulative distance if not available
+    if (distances.length === 0 && speeds.length > 0 && timestamps.length > 0) {
+      let cumDist = 0
+      for (let i = 1; i < timestamps.length; i++) {
+        const deltaSeconds = timestamps[i] - timestamps[i - 1]
+        const deltaHours = deltaSeconds / 3600
+        const speed = speeds[i - 1] || 0
+        cumDist += speed * deltaHours
+        distances.push(cumDist)
+      }
     }
 
     return {
       timestamps: timestamps.map(t => new Date(t * 1000).toLocaleTimeString()),
       heartRates,
       speeds,
-      elevations
+      elevations,
+      distances,
+      temperatures,
+      positions
     }
   }, [parseResult])
 
-  useEffect(() => {
+/*   useEffect(() => {
     (async () => {
   try {
     const reply = await askAI("in not more than 200 words, how to train bycle using heart rate data?");
@@ -118,7 +159,7 @@ function App() {
     console.error("Error:", error);
   }
 })();
-  }, [])
+  }, []) */
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -176,11 +217,13 @@ function App() {
 
         {/* Summary Stats */}
         {summary && (
-          <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-4">
             <StatCard label="Data points" value={summary.records.toLocaleString()} />
             <StatCard label="Distance (km)" value={summary.distance} />
             <StatCard label="Duration" value={summary.timeFormatted} />
             <StatCard label="Avg BPM" value={summary.avgHeartRate} />
+            <StatCard label="Avg Temp (°C)" value={summary.avgTemp} />
+            <StatCard label="Max Temp (°C)" value={summary.maxTemp} />
             <StatCard label="NP (W)" value={summary.np} />
             <StatCard label="TSS" value={summary.tss} />
             <StatCard label="20' Best (W)" value={summary.best20min} />
@@ -207,7 +250,12 @@ function App() {
               heartRates={chartData.heartRates}
               speeds={chartData.speeds}
               elevations={chartData.elevations}
+              distances={chartData.distances}
+              temperatures={chartData.temperatures}
             />
+            {chartData.positions && chartData.positions.length > 1 && (
+              <MapWrapper positions={chartData.positions} />
+            )}
           </section>
         )}
       </div>

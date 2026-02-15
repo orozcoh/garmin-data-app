@@ -8,12 +8,17 @@ interface ChartWrapperProps {
   heartRates: number[]
   speeds: number[]
   elevations: number[]
+  distances: number[]
+  temperatures: number[]
 }
 
-function ChartWrapper({ timestamps, heartRates, speeds, elevations }: ChartWrapperProps) {
+function ChartWrapper({ timestamps, heartRates, speeds, elevations, distances, temperatures }: ChartWrapperProps) {
   // Prepare data for Recharts (combine arrays into objects)
   const chartData = useMemo(() => {
-    const maxLength = Math.max(timestamps.length, heartRates.length, speeds.length, elevations.length)
+    const maxLength = Math.max(
+      timestamps.length, heartRates.length, speeds.length, elevations.length,
+      distances.length, temperatures.length
+    )
     const data = []
 
     for (let i = 0; i < maxLength; i++) {
@@ -22,11 +27,13 @@ function ChartWrapper({ timestamps, heartRates, speeds, elevations }: ChartWrapp
         heartRate: heartRates[i] || null,
         speed: speeds[i] || null,
         elevation: elevations[i] || null,
+        distance: distances[i] || null,
+        temperature: temperatures[i] || null,
       })
     }
 
     return data
-  }, [timestamps, heartRates, speeds, elevations])
+  }, [timestamps, heartRates, speeds, elevations, distances, temperatures])
 
   const heartRateConfig = {
     heartRate: {
@@ -103,6 +110,50 @@ function ChartWrapper({ timestamps, heartRates, speeds, elevations }: ChartWrapp
                 type="monotone"
                 dataKey="elevation"
                 stroke="#0ea5e9"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ChartContainer>
+        </ChartCard>
+      )}
+
+      {distances.length > 0 && (
+        <ChartCard title="Distance" tag="km">
+          <ChartContainer config={{
+            distance: { label: "Distance", color: "hsl(var(--chart-4))" }
+          }} className="h-[280px] sm:h-[320px] w-full">
+            <LineChart data={chartData}>
+              <CartesianGrid />
+              <XAxis dataKey="time" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent className="bg-slate-800 border-slate-700 text-slate-100 [&>div>span:last-child]:text-white" />} />
+              <Line
+                type="monotone"
+                dataKey="distance"
+                stroke="#10b981"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ChartContainer>
+        </ChartCard>
+      )}
+
+      {temperatures.length > 0 && (
+        <ChartCard title="Temperature" tag="°C">
+          <ChartContainer config={{
+            temperature: { label: "Temperature", color: "hsl(var(--chart-5))" }
+          }} className="h-[280px] sm:h-[320px] w-full">
+            <LineChart data={chartData}>
+              <CartesianGrid />
+              <XAxis dataKey="time" />
+              <YAxis />
+              <ChartTooltip content={<ChartTooltipContent className="bg-slate-800 border-slate-700 text-slate-100 [&>div>span:last-child]:text-white" />} />
+              <Line
+                type="monotone"
+                dataKey="temperature"
+                stroke="#f59e0b"
                 strokeWidth={2}
                 dot={false}
               />

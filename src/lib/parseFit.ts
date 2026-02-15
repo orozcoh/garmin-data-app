@@ -8,6 +8,9 @@ export interface FitRecord {
   power?: number;
   cadence?: number;
   temperature?: number;
+  distance?: number;
+  position_lat?: number;
+  position_long?: number;
   left_power?: number;
   right_power?: number;
 }
