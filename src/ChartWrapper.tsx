@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import React, { useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import type { ChartConfig } from '@/components/ui/chart'
@@ -10,18 +10,41 @@ interface ChartWrapperProps {
   elevations: number[]
   distances: number[]
   temperatures: number[]
+  sampleRate: number
 }
 
-function ChartWrapper({ timestamps, heartRates, speeds, elevations, distances, temperatures }: ChartWrapperProps) {
+const ChartWrapper = React.memo(function ChartWrapper({ timestamps, heartRates, speeds, elevations, distances, temperatures, sampleRate }: ChartWrapperProps) {
   // Prepare data for Recharts (combine arrays into objects)
   const chartData = useMemo(() => {
-    const maxLength = Math.max(
-      timestamps.length, heartRates.length, speeds.length, elevations.length,
-      distances.length, temperatures.length
-    )
-    const data = []
+    if (timestamps.length === 0) return []
 
-    for (let i = 0; i < maxLength; i++) {
+    // Parse timestamps to get the actual timestamps for sampling
+    // timestamps are in locale time string format, we need to calculate indices to sample
+    // Since we don't have raw timestamps, we'll sample based on array indices
+    // The records in FIT files are typically 1-second intervals
+    
+    const data: Array<{
+      time: string
+      heartRate: number | null
+      speed: number | null
+      elevation: number | null
+      distance: number | null
+      temperature: number | null
+    }> = []
+
+    // Always include first point
+    data.push({
+      time: timestamps[0] || '',
+      heartRate: heartRates[0] || null,
+      speed: speeds[0] || null,
+      elevation: elevations[0] || null,
+      distance: distances[0] || null,
+      temperature: temperatures[0] || null,
+    })
+
+    // Sample at the specified rate (every N records)
+    // Assuming ~1 second intervals in the data
+    for (let i = sampleRate; i < timestamps.length; i += sampleRate) {
       data.push({
         time: timestamps[i] || '',
         heartRate: heartRates[i] || null,
@@ -32,8 +55,21 @@ function ChartWrapper({ timestamps, heartRates, speeds, elevations, distances, t
       })
     }
 
+    // Always include last point if not already included
+    const lastIndex = timestamps.length - 1
+    if (lastIndex > 0 && (lastIndex % sampleRate) !== 0) {
+      data.push({
+        time: timestamps[lastIndex] || '',
+        heartRate: heartRates[lastIndex] || null,
+        speed: speeds[lastIndex] || null,
+        elevation: elevations[lastIndex] || null,
+        distance: distances[lastIndex] || null,
+        temperature: temperatures[lastIndex] || null,
+      })
+    }
+
     return data
-  }, [timestamps, heartRates, speeds, elevations, distances, temperatures])
+  }, [timestamps, heartRates, speeds, elevations, distances, temperatures, sampleRate])
 
   const heartRateConfig = {
     heartRate: {
@@ -163,7 +199,7 @@ function ChartWrapper({ timestamps, heartRates, speeds, elevations, distances, t
       )}
     </div>
   )
-}
+})
 
 export default ChartWrapper
 

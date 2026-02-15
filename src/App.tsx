@@ -1,5 +1,6 @@
-import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react'
-import { parseFitFile, type ParseResult, type FitRecord } from './lib/parseFit'
+import React, { useState, useCallback, useMemo, useRef } from 'react'
+import ReactMarkdown from 'react-markdown'
+import { parseFitFile, type ParseResult } from './lib/parseFit'
 import ChartWrapper from './ChartWrapper'
 import MapWrapper from './MapWrapper'
 import { askAI } from './lib/askAI'
@@ -11,7 +12,21 @@ function App() {
   const [parseResult, setParseResult] = useState<ParseResult | null>(null)
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
+  const [viewMode, setViewMode] = useState<'fileData' | 'aiTraining'>('fileData')
+  const [aiResponse, setAiResponse] = useState<string | null>(null)
+  const [isAiLoading, setIsAiLoading] = useState(false)
+  const [sampleRate, setSampleRate] = useState<number>(10)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const sampleRateOptions = [
+    { value: 5, label: '5s' },
+    { value: 10, label: '10s' },
+    { value: 15, label: '15s' },
+    { value: 20, label: '20s' },
+    { value: 30, label: '30s' },
+    { value: 60, label: '1min' },
+    { value: 300, label: '5min' },
+  ]
 
 
   // Early return optimization (7.8 Early Return from Functions)
@@ -33,6 +48,8 @@ function App() {
     setError('')
     setIsLoading(true)
     setParseResult(null)
+    setAiResponse(null)
+    setViewMode('fileData')
 
     try {
       const arrayBuffer = await file.arrayBuffer()
@@ -171,6 +188,48 @@ function App() {
             Upload a FIT file to view summary stats and simple line charts. The layout is kept
             intentionally minimal for focus on the data.
           </p>
+          {parseResult && (
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setViewMode('fileData')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === 'fileData'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  File Data
+                </button>
+                <button
+                  onClick={() => setViewMode('aiTraining')}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    viewMode === 'aiTraining'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  AI Training
+                </button>
+              </div>
+              {viewMode === 'fileData' && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-slate-400">Sample:</label>
+                  <select
+                    value={sampleRate}
+                    onChange={(e) => setSampleRate(Number(e.target.value))}
+                    className="px-3 py-2 rounded-lg text-sm bg-slate-800 text-slate-100 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    {sampleRateOptions.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
         </header>
 
         {/* File Upload Card */}
@@ -215,46 +274,108 @@ function App() {
           </div>
         </section>
 
-        {/* Summary Stats */}
-        {summary && (
-          <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-4">
-            <StatCard label="Data points" value={summary.records.toLocaleString()} />
-            <StatCard label="Distance (km)" value={summary.distance} />
-            <StatCard label="Duration" value={summary.timeFormatted} />
-            <StatCard label="Avg BPM" value={summary.avgHeartRate} />
-            <StatCard label="Avg Temp (°C)" value={summary.avgTemp} />
-            <StatCard label="Max Temp (°C)" value={summary.maxTemp} />
-            <StatCard label="NP (W)" value={summary.np} />
-            <StatCard label="TSS" value={summary.tss} />
-            <StatCard label="20' Best (W)" value={summary.best20min} />
-          </section>
-        )}
+        {/* Content based on view mode */}
+        {viewMode === 'fileData' ? (
+          <>
+            {/* Summary Stats */}
+            {summary && (
+              <section className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-10 gap-4">
+                {[
+                  { label: 'Data points', value: summary.records.toLocaleString() },
+                  { label: 'Distance (km)', value: summary.distance },
+                  { label: 'Duration', value: summary.timeFormatted },
+                  { label: 'Avg BPM', value: summary.avgHeartRate },
+                  { label: 'Avg Temp (°C)', value: summary.avgTemp },
+                  { label: 'Max Temp (°C)', value: summary.maxTemp },
+                  { label: 'NP (W)', value: summary.np },
+                  { label: 'TSS', value: summary.tss },
+                  { label: "20' Best (W)", value: summary.best20min },
+                ]
+                  .filter(stat => {
+                    const val = String(stat.value).trim()
+                    return val !== '' && val !== '0' && val !== 'N/A'
+                  })
+                  .map(stat => (
+                    <StatCard key={stat.label} label={stat.label} value={stat.value} />
+                  ))}
+              </section>
+            )}
 
-        {/* Device Info */}
-        {parseResult && (
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Device</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <StatCard label="Manufacturer" value={parseResult.device.manufacturer || 'N/A'} />
-              <StatCard label="Model" value={parseResult.device.model || 'N/A'} />
-              <StatCard label="GPS" value={parseResult.device.gps_enabled ? 'Yes' : 'No'} />
-            </div>
-          </section>
-        )}
+            {/* Device Info */}
+            {parseResult && (
+              <section>
+                <h2 className="text-xl font-semibold mb-4">Device</h2>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Manufacturer', value: parseResult.device.manufacturer || '' },
+                    { label: 'Model', value: parseResult.device.model || '' },
+                    { label: 'GPS', value: parseResult.device.gps_enabled ? 'Yes' : 'No' },
+                  ]
+                    .filter(stat => {
+                      const val = String(stat.value).trim()
+                      return val !== '' && val !== '0' && val !== 'N/A'
+                    })
+                    .map(stat => (
+                      <StatCard key={stat.label} label={stat.label} value={stat.value} />
+                    ))}
+                </div>
+              </section>
+            )}
 
-        {/* Charts */}
-        {chartData && (
+            {/* Charts */}
+            {chartData && (
+              <section className="space-y-6">
+                <ChartWrapper
+                  timestamps={chartData.timestamps}
+                  heartRates={chartData.heartRates}
+                  speeds={chartData.speeds}
+                  elevations={chartData.elevations}
+                  distances={chartData.distances}
+                  temperatures={chartData.temperatures}
+                  sampleRate={sampleRate}
+                />
+                {chartData.positions && chartData.positions.length > 1 && (
+                  <MapWrapper positions={chartData.positions} />
+                )}
+              </section>
+            )}
+          </>
+        ) : (
+          /* AI Training View */
           <section className="space-y-6">
-            <ChartWrapper
-              timestamps={chartData.timestamps}
-              heartRates={chartData.heartRates}
-              speeds={chartData.speeds}
-              elevations={chartData.elevations}
-              distances={chartData.distances}
-              temperatures={chartData.temperatures}
-            />
-            {chartData.positions && chartData.positions.length > 1 && (
-              <MapWrapper positions={chartData.positions} />
+            {!aiResponse ? (
+              <div className="flex justify-center py-8">
+                <button
+                  onClick={async () => {
+                    if (aiResponse) return
+                    setIsAiLoading(true)
+                    try {
+                      const prompt = `Analyze this cycling workout and provide training insights in markdown format. Workout data: Distance ${summary?.distance}km, Duration ${summary?.timeFormatted}, Avg HR ${summary?.avgHeartRate} BPM, NP ${summary?.np}W, TSS ${summary?.tss}, 20min best ${summary?.best20min}W.`
+                      const response = await askAI(prompt)
+                      setAiResponse(response)
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : 'Failed to get AI response')
+                    } finally {
+                      setIsAiLoading(false)
+                    }
+                  }}
+                  disabled={isAiLoading}
+                  className="px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg font-medium transition-colors"
+                >
+                  {isAiLoading ? (
+                    <span className="flex items-center gap-2">
+                      <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Analyzing...
+                    </span>
+                  ) : (
+                    'Ask AI for training'
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="prose prose-invert prose-slate max-w-none">
+                <ReactMarkdown>{aiResponse}</ReactMarkdown>
+              </div>
             )}
           </section>
         )}

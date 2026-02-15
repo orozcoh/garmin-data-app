@@ -28,7 +28,7 @@ function MapController({ positions }: { positions: Array<{ lat: number; lng: num
   return null
 }
 
-function MapWrapper({ positions }: MapWrapperProps) {
+const MapWrapper = React.memo(function MapWrapper({ positions }: MapWrapperProps) {
   if (!positions || positions.length === 0) return null
 
   const center: [number, number] = [positions[0].lat, positions[0].lng]
@@ -66,6 +66,6 @@ function MapWrapper({ positions }: MapWrapperProps) {
       </div>
     </div>
   )
-}
+})
 
 export default MapWrapper
