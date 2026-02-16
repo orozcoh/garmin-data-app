@@ -15,7 +15,6 @@ function App() {
   const [error, setError] = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [viewMode, setViewMode] = useState<'fileData' | 'aiTraining'>('fileData')
-  const sampleRate = 300
   
   // AI state
   const [aiResponse, setAiResponse] = useState<string | null>(null)
