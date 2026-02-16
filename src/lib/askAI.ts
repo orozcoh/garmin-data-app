@@ -1,6 +1,7 @@
 // Proxy API KEY handler
   
-const url = import.meta.env.VITE_CLOUDFLARE_WORKER_URL || "http://localhost:8787";
+//const url = "http://localhost:8787";
+const url = "https://gateway.orozcoh.com";
 
 export async function askAI(message: string, model: string = "openrouter/free"): Promise<string> {
   const headers = {

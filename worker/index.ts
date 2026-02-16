@@ -2,9 +2,10 @@
  * Configuration Constants
  */
 const DEFAULT_MODEL = "openrouter/free";
-//const ALLOWED_ORIGIN = "https://diez.orozcoh.com"; 
-const ALLOWED_ORIGIN = "http://localhost:5173";
-//const ALLOWED_ORIGIN = "*";
+const ALLOWED_ORIGINS = [
+  "http://localhost:5173",
+  "https://diez.orozcoh.com",
+];
 
 /**
  * Type Definitions for OpenRouter
@@ -30,9 +31,11 @@ export default {
 
     // 1. Handle Preflight (OPTIONS) requests
     if (request.method === "OPTIONS") {
+      // Use the requesting origin if it's in our allowed list
+      const allowedOrigin = origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
       return new Response(null, {
         headers: {
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN,
+          "Access-Control-Allow-Origin": allowedOrigin,
           "Access-Control-Allow-Methods": "POST, OPTIONS",
           "Access-Control-Allow-Headers": "Content-Type",
         },
@@ -41,7 +44,7 @@ export default {
 
     // 2. Strict Origin Check
     // This prevents other websites from calling your worker via fetch/XHR
-    if (origin !== ALLOWED_ORIGIN) {
+    if (!origin || !ALLOWED_ORIGINS.includes(origin)) {
       return new Response(JSON.stringify({ error: "Unauthorized Origin" }), { 
         status: 403,
         headers: { "Content-Type": "application/json" }
@@ -61,7 +64,7 @@ export default {
         headers: {
           "Authorization": `Bearer ${env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
-          "HTTP-Referer": ALLOWED_ORIGIN, // OpenRouter ranking requirement
+          "HTTP-Referer": origin, // OpenRouter ranking requirement
         },
         body: JSON.stringify({
           model: data.model || DEFAULT_MODEL, // Use frontend model or our constant
@@ -76,7 +79,7 @@ export default {
         statusText: openRouterResponse.statusText,
         headers: { 
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN 
+          "Access-Control-Allow-Origin": origin 
         },
       });
     } catch (error) {
@@ -85,7 +88,7 @@ export default {
         status: 500,
         headers: { 
           "Content-Type": "application/json",
-          "Access-Control-Allow-Origin": ALLOWED_ORIGIN 
+          "Access-Control-Allow-Origin": origin 
         }
       });
     }
